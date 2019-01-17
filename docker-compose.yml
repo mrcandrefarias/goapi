@@ -1,0 +1,9 @@
+version: "3"
+services:
+  redis:
+    image: redis
+    restart: always
+  teste:
+    build: .
+    ports:
+      - "8080:8080"
