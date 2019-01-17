@@ -78,7 +78,7 @@ func IsClienteImpactado(idCliente string) bool {
 		 * Cliente não está em estado de noventena. Não foi impactado nos últimos 90 dias.
 		 * Armazena o cliente no cache, para que ele não possa ser impactado novamente(noventena) e retorn true
 		*/
-		SetChaveRedis(idCliente, idCliente, 900)
+		SetChaveRedis(idCliente, idCliente, noventena)
         return true
 	}
 	
@@ -114,11 +114,6 @@ func DelValue(chave string) {
 	conn := pool.Get()
 	conn.Do("DEL", chave)
 	defer conn.Close()
-}
-
-func Calculate(x int) (result int) {
-	result = x + 2
-	return result
 }
 
 func main() {
