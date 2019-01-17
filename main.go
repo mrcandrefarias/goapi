@@ -14,12 +14,16 @@ var pool *redis.Pool
 /**
  * Cria uma pool de conexao com o redis
 */
-func newPool(addr string) *redis.Pool {
-	return &redis.Pool{
-	  MaxIdle: 3,
-	  IdleTimeout: 240 * time.Second,
-	  Dial: func () (redis.Conn, error) { return redis.Dial("tcp", addr) },
+func getPool() *redis.Pool {
+	if(pool == nil){
+        pool = &redis.Pool{
+			MaxIdle: 3,
+			IdleTimeout: 240 * time.Second,
+			Dial: func () (redis.Conn, error) { return redis.Dial("tcp", redisUrlServer) },
+		  }
 	}
+
+	return pool	
 }
 
 /**
@@ -42,8 +46,7 @@ func IsClienteImpactadoEndpoint(w http.ResponseWriter, r *http.Request) {
 	
 	clienteId := IsClienteImpactado( params["id"] )
 	
-	JsonResponse(w, http.StatusOK, clienteId)
-	
+	JsonResponse(w, http.StatusOK, clienteId)	
 }
 
 /**
@@ -89,7 +92,7 @@ func IsClienteImpactado(idCliente string) bool {
  * Se a chave não existir no cache, o nil será retornado
 */
 func GetChaveFromRedis(chave string) string {
-	conn := pool.Get()
+	conn := getPool().Get()
 	value, _ := redis.String(conn.Do("GET", chave))
 	defer conn.Close()
     return value
@@ -101,7 +104,7 @@ func GetChaveFromRedis(chave string) string {
  * 
 */
 func SetChaveRedis(chave string, valor string, ttl int)  {
-	conn := pool.Get()
+	conn := getPool().Get()
 	conn.Do("SETEX", chave, ttl, valor)
 	defer conn.Close()
 }
@@ -110,10 +113,11 @@ func SetChaveRedis(chave string, valor string, ttl int)  {
  * Remove a chave e seu valor armazenados no Redis (Cache). 
  * 
 */
-func DelValue(chave string) {
-	conn := pool.Get()
+func DelValue(chave string) bool {
+	conn := getPool().Get()
 	conn.Do("DEL", chave)
 	defer conn.Close()
+	return true
 }
 
 func main() {
@@ -121,8 +125,6 @@ func main() {
 	
 	r.HandleFunc("/clientes/{id}", IsClienteImpactadoEndpoint).Methods("GET")
 	r.HandleFunc("/clientes/{id}", DeleteClienteImpactadoEndpoint).Methods("DELETE")
-	
-    pool = newPool(redisUrlServer)
 	
 	if err := http.ListenAndServe( serverPort, r); err != nil {
 		log.Fatal(err)
